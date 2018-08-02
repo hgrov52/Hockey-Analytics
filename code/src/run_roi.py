@@ -1,7 +1,9 @@
 import cv2,os,sys
 import numpy as np
-sys.path.append('../utils/')
-import find_color_filter
+from utils import find_color_filter
+from utils import on_ice_blue_line
+from utils import on_ice_yellow_line
+from utils import warp_image
 
 """
 REVISE:
@@ -33,7 +35,6 @@ def in_line_with_yellow_contours(im,cX,cY,yellow_contours,y_threshold=50):
       if(dist<x[0]):
         closest[i] = (dist,pt)
         break
-  
   best = None,None
   for x in closest:
     #cv2.circle(im, (x[1][0], x[1][1]), 5, (0, 255, 0), -1)
@@ -44,11 +45,10 @@ def in_line_with_yellow_contours(im,cX,cY,yellow_contours,y_threshold=50):
     return best[1]
   return False
 
-
 vidcap = cv2.VideoCapture('../Frame_Images/ACHA UNH/ACHA_vid.mp4')
 
 Rr2 = None
-blue,yellow,red,goal_line,blue_line = False,False,False,False,True
+blue,yellow,red,goal_line,blue_line = False,True,False,False,True
 success = True
 outer = False
 detect_colors = False
@@ -78,7 +78,6 @@ if(detect_colors):
       if(outer):
         break
 else:
-  Yr, Yg, Yb, Yrange_ = (62, 90, 206, 42) # yellow (use 1000 bottom threshold)
   Rr, Rg, Rb, Rrange_ = (150, 94, 118, 16) # red line |clear|
   Rr2,Rg2,Rb2,Rrange2 = (154, 42, 164, 14) # red line |blur|
   goal_line_hsv_values = [(146, 44, 118, 10), # clear/highly zoomed:
@@ -113,358 +112,25 @@ while file_num < len(lst):
   hsv = cv2.cvtColor(im, cv2.COLOR_BGR2HSV)
 
 
-
-  # =================================
-  # generate yellow mask
-  yellow_contours = []
-  if(yellow):
-    lower_range = np.array([Yr-Yrange_, Yg-Yrange_, Yb-Yrange_], dtype=np.uint8)
-    upper_range = np.array([Yr+Yrange_, Yg+Yrange_, Yb+Yrange_], dtype=np.uint8)
-    Ymask = cv2.inRange(hsv, lower_range, upper_range)
-    image, cnts, hier = cv2.findContours(Ymask.copy(), 1, 2)
-    for c in cnts:
-      M = cv2.moments(c,True)
-      if(M['m00'] >500):
-        cX = int(M["m10"] / M["m00"]) 
-        cY = int(M["m01"] / M["m00"])
-        #cv2.drawContours(im, [c], -1, (255, 0, 0), 2)
-        #cv2.circle(im, (cX, cY), 1, (0, 255, 0), -1)
-        #v2.putText(im, str(M['m00']), (cX - 20, cY - 20),
-        #cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
-    #gray = cv2.cvtColor(Ymask,cv2.COLOR_HSV2BGR)
-    edges = cv2.Canny(image,0,0,apertureSize = 5)
-    #cv2.imshow('Ymask',edges)
-    lines = cv2.HoughLinesP(edges,1,np.pi/180,100,20)
-    lines2 = cv2.HoughLines(edges,1,np.pi/180,150)
-
-    radial = {}
-    if(lines2 is not None):
-      for line in lines2:
-        for rho,theta in line:
-          radial.setdefault(theta,[]).append(rho)
-    if(len(radial.keys())>0):
-      rad_min = min(radial.keys())
-      rad_max = max(radial.keys())
-      list_range = rad_max-rad_min
-      HORIZONTAL_RADIANS = 1.5708
-      PERPENTICULAR_RANGE = 0.2
-      
-      # if perpendicular enough lines marking hard corner of ice
-      if(list_range>PERPENTICULAR_RANGE):
-        positive_slope = {theta: rhos for theta,rhos in radial.items() if (theta<HORIZONTAL_RADIANS and abs(theta - HORIZONTAL_RADIANS)>PERPENTICULAR_RANGE/2.0 )} 
-        negative_slope = {theta: rhos for theta,rhos in radial.items() if (theta>HORIZONTAL_RADIANS and abs(theta - HORIZONTAL_RADIANS)>PERPENTICULAR_RANGE/2.0 )}
-        pos_duplicates = {theta: rhos for theta, rhos in positive_slope.items() if len(rhos)==2}
-        neg_duplicates = {theta: rhos for theta, rhos in negative_slope.items() if len(rhos)==2}
-        
-        #               pos  neg
-        lines_to_draw = [None,None] 
-
-        if(len(pos_duplicates.keys())==1):
-          theta = list(pos_duplicates.keys())[0] # bc its the only one
-          lines_to_draw[0] = [theta,max(pos_duplicates[theta])]
-        if(len(neg_duplicates.keys())==1):
-          theta = list(neg_duplicates.keys())[0] # bc its the only one
-          lines_to_draw[1] = [theta,max(neg_duplicates[theta])]
-
-        if(lines_to_draw[0] == None and len(positive_slope.keys())==1):
-          theta = list(positive_slope.keys())[0]
-          lines_to_draw[0] = [theta,max(positive_slope[theta])]
-        if(lines_to_draw[1] == None and len(negative_slope.keys())==1):
-          theta = list(negative_slope.keys())[0]
-          lines_to_draw[1] = [theta,max(negative_slope[theta])]
-
-        if(lines_to_draw[0] == None and len(positive_slope.keys())>0):
-          theta = max(positive_slope.keys())
-          lines_to_draw[0] = [theta,max(positive_slope[theta])]
-        if(lines_to_draw[1] == None and len(negative_slope.keys())>0):
-          theta = max(negative_slope.keys())
-          lines_to_draw[1] = [theta,max(negative_slope[theta])]
-
-        if(lines_to_draw[0]!=None and lines_to_draw[1]!=None):
-          A = []
-          B = []
-          for theta,rho in lines_to_draw:
-            #print(theta*180/np.pi,rho)
-            A.append([np.cos(theta),np.sin(theta)])
-            B.append([rho])
-            a = np.cos(theta)
-            b = np.sin(theta)
-            x0 = a*rho
-            y0 = b*rho
-            x1 = int(x0 + 1500*(-b))
-            y1 = int(y0 + 1500*(a))
-            x2 = int(x0 - 1500*(-b))
-            y2 = int(y0 - 1500*(a))
-            cv2.line(im,(x1,y1),(x2,y2),(0,0,255),2)
-
-          # solve for intersection point
-          A = np.array(A)
-          B = np.array(B)
-          x00, y00 = np.linalg.solve(A, B)
-          x00, y00 = int(np.round(x00)), int(np.round(y00))
-          cv2.circle(im,(x00,y00),5,(0,255,0),-1)
-
-          # 1.414 theta threshold found by averaging 
-          # the averages between the two measured ranges 
-          # of positive sloped thetas
-          # 1.3788 - 1.4661
-          # 1.3614 - 1.4486
-          #        ->        1.42245 & 1.405
-          # so if theta is greater, rotate warping box cc once
-          if(lines_to_draw[0][0]>1.414):
-            #TRANSFORM_X = 200
-            #TRANSFORM_Y = 200
-            a_pos = np.cos(lines_to_draw[0][0])
-            b_pos = np.sin(lines_to_draw[0][0])
-            a_neg = np.cos(lines_to_draw[1][0])
-            b_neg = np.sin(lines_to_draw[1][0])
-
-            x01 = int(x00 + TRANSFORM_X*(-b_pos))
-            y01 = int(y00 + TRANSFORM_X*(a_pos))
-            x10 = int(x00 - TRANSFORM_Y*(-b_neg))
-            y10 = int(y00 - TRANSFORM_Y*(a_neg))
-            cv2.circle(im,(x01,y01),5,(0,255,0),-1)
-            cv2.circle(im,(x10,y10),5,(0,255,0),-1)
-
-            x11 = int(x01 - TRANSFORM_Y*(-b_neg))
-            y11 = int(y01 - TRANSFORM_Y*(a_neg))
-            cv2.circle(im,(x11,y11),5,(0,255,0),-1)
-
-            tmp_x00,tmp_y00 = x00,y00
-            x00,y00 = x01,y01
-            x01,y01 = x11,y11
-            x11,y11 = x10,y10
-            x10,y10 = tmp_x00,tmp_y00
-          else:
-            #TRANSFORM_X = 200
-            #TRANSFORM_Y = 600
-            a_pos = np.cos(lines_to_draw[0][0])
-            b_pos = np.sin(lines_to_draw[0][0])
-            a_neg = np.cos(lines_to_draw[1][0])
-            b_neg = np.sin(lines_to_draw[1][0])
-
-            x01 = int(x00 + TRANSFORM_Y*(-b_pos))
-            y01 = int(y00 + TRANSFORM_Y*(a_pos))
-            x10 = int(x00 - TRANSFORM_X*(-b_neg))
-            y10 = int(y00 - TRANSFORM_X*(a_neg))
-            cv2.circle(im,(x01,y01),5,(0,255,0),-1)
-            cv2.circle(im,(x10,y10),5,(0,255,0),-1)
-
-            x11 = int(x01 - TRANSFORM_X*(-b_neg))
-            y11 = int(y01 - TRANSFORM_X*(a_neg))
-            cv2.circle(im,(x11,y11),5,(0,255,0),-1)
-
-          # warp perspective 
-          #MAX_SHAPE = 400
-          X_SHAPE = MAX_SHAPE/TRANSFORM_X_SHAPE
-          Y_SHAPE = MAX_SHAPE/TRANSFORM_Y_SHAPE
-          pts1 = np.float32(((x00,y00), (x01,y01),
-                    (x11,y11), (x10,y10)))
-          pts2 = np.float32(((MAX_SHAPE-X_SHAPE, MAX_SHAPE-Y_SHAPE), (MAX_SHAPE-X_SHAPE, MAX_SHAPE+Y_SHAPE),
-                    (MAX_SHAPE+X_SHAPE, MAX_SHAPE+Y_SHAPE), (MAX_SHAPE+X_SHAPE, MAX_SHAPE-Y_SHAPE)))
-          M = cv2.getPerspectiveTransform(pts1,pts2)
-          warp = cv2.warpPerspective(im,M,(1000,1000))
-          cv2.imshow('final',warp)
-
-        else:
-          if(lines_to_draw==[None,None]):
-            print("missing both")
-          elif(lines_to_draw[0]==None):
-            print("missing positive slope")
-          elif(lines_to_draw[1]==None):
-            print("missing negative slope")
-          for theta,rhos in radial.items():
-            for rho in rhos:
-              a = np.cos(theta)
-              b = np.sin(theta)
-              x0 = a*rho
-              y0 = b*rho
-              x1 = int(x0 + 1500*(-b))
-              y1 = int(y0 + 1500*(a))
-              x2 = int(x0 - 1500*(-b))
-              y2 = int(y0 - 1500*(a))
-              cv2.line(im,(x1,y1),(x2,y2),(0,0,255),2)
-    
-    # for blue board line use
-    if(lines is not None):
-      best = None
-      for line in lines:
-        for x1,y1,x2,y2 in line:
-          yellow_contours.append((x1,y1,x2,y2))
-
   # =================================
   # blue line
+  blue_lines = [None,None]
   if(blue_line):
-    r,g,b,rng = (117,41,242,13)
-    lower_range = np.array([r-rng, g-rng, b-rng], dtype=np.uint8)
-    upper_range = np.array([r+rng, g+rng, b+rng], dtype=np.uint8)
-    mask = cv2.inRange(hsv, lower_range, upper_range)
-    image, cnts, hier = cv2.findContours(mask.copy(), 1, 2)
-    for c in cnts:
-      M = cv2.moments(c,True)
-      if(M['m00'] >100):
-        cX = int(M["m10"] / M["m00"]) 
-        cY = int(M["m01"] / M["m00"])
-    edges = cv2.Canny(image,0,0,apertureSize = 5)
-    lines = cv2.HoughLinesP(edges,1,np.pi/180,100,20)
-    lines2 = cv2.HoughLines(edges,1,np.pi/180,150)
-    radial = {}
-    if(lines2 is not None):
-      for line in lines2:
-        for rho,theta in line:
-          radial.setdefault(theta,[]).append(rho)
+    blue_lines = on_ice_blue_line.define_lines(im,draw=True)
+    print(blue_lines)
     
-    if(len(radial.keys())>0):
-      HORIZONTAL_RADIANS = 1.5708
-      PERPENTICULAR_RANGE = 0.2
+      
+  # =================================
+  # generate yellow mask
+  if(yellow):
+    info = [TRANSFORM_X,TRANSFORM_Y,TRANSFORM_X_SHAPE,TRANSFORM_Y_SHAPE,MAX_SHAPE]
+    yellow_contours,warp_lines = on_ice_yellow_line.define_lines(im,draw=False)
+
+    if(warp_lines[0]!=None and warp_lines[1]!=None):
       
 
-      
-      positive_slope = {theta: rhos for theta,rhos in radial.items() if (theta<HORIZONTAL_RADIANS)} 
-      negative_slope = {theta: rhos for theta,rhos in radial.items() if (theta>HORIZONTAL_RADIANS)}
-      pos_duplicates = {theta: rhos for theta, rhos in positive_slope.items() if len(rhos)==2}
-      neg_duplicates = {theta: rhos for theta, rhos in negative_slope.items() if len(rhos)==2}
-      print()
-      for theta,rhos in pos_duplicates.items():
-        print(theta)
+      warp_image.warp_image(im,warp_lines,draw=False)
 
-      #               pos  neg
-      lines_to_draw = [None,None] 
-
-      if(len(pos_duplicates.keys())==1):
-        theta = list(pos_duplicates.keys())[0] # bc its the only one
-        lines_to_draw[0] = [theta,max(pos_duplicates[theta])]
-      if(len(neg_duplicates.keys())==1):
-        theta = list(neg_duplicates.keys())[0] # bc its the only one
-        lines_to_draw[1] = [theta,max(neg_duplicates[theta])]
-
-      if(lines_to_draw[0] == None and len(positive_slope.keys())==1):
-        theta = list(positive_slope.keys())[0]
-        lines_to_draw[0] = [theta,max(positive_slope[theta])]
-      if(lines_to_draw[1] == None and len(negative_slope.keys())==1):
-        theta = list(negative_slope.keys())[0]
-        lines_to_draw[1] = [theta,max(negative_slope[theta])]
-
-      if(lines_to_draw[0] == None and len(positive_slope.keys())>0):
-        theta = max(positive_slope.keys())
-        lines_to_draw[0] = [theta,max(positive_slope[theta])]
-      if(lines_to_draw[1] == None and len(negative_slope.keys())>0):
-        theta = max(negative_slope.keys())
-        lines_to_draw[1] = [theta,max(negative_slope[theta])]
-
-      if(lines_to_draw[0]!=None and lines_to_draw[1]!=None):
-        A = []
-        B = []
-        for theta,rho in lines_to_draw:
-          #print(theta*180/np.pi,rho)
-          A.append([np.cos(theta),np.sin(theta)])
-          B.append([rho])
-          a = np.cos(theta)
-          b = np.sin(theta)
-          x0 = a*rho
-          y0 = b*rho
-          x1 = int(x0 + 1500*(-b))
-          y1 = int(y0 + 1500*(a))
-          x2 = int(x0 - 1500*(-b))
-          y2 = int(y0 - 1500*(a))
-          cv2.line(im,(x1,y1),(x2,y2),(0,0,255),2)
-
-        # solve for intersection point
-        A = np.array(A)
-        B = np.array(B)
-        x00, y00 = np.linalg.solve(A, B)
-        x00, y00 = int(np.round(x00)), int(np.round(y00))
-        cv2.circle(im,(x00,y00),5,(0,255,0),-1)
-
-
-
-        # 1.414 theta threshold found by averaging 
-        # the averages between the two measured ranges 
-        # of positive sloped thetas
-        # 1.3788 - 1.4661
-        # 1.3614 - 1.4486
-        #        ->        1.42245 & 1.405
-        # so if theta is greater, rotate warping box cc once
-        if(lines_to_draw[0][0]>1.414):
-          #TRANSFORM_X = 200
-          #TRANSFORM_Y = 200
-          a_pos = np.cos(lines_to_draw[0][0])
-          b_pos = np.sin(lines_to_draw[0][0])
-          a_neg = np.cos(lines_to_draw[1][0])
-          b_neg = np.sin(lines_to_draw[1][0])
-
-          x01 = int(x00 + TRANSFORM_X*(-b_pos))
-          y01 = int(y00 + TRANSFORM_X*(a_pos))
-          x10 = int(x00 - TRANSFORM_Y*(-b_neg))
-          y10 = int(y00 - TRANSFORM_Y*(a_neg))
-          cv2.circle(im,(x01,y01),5,(0,255,0),-1)
-          cv2.circle(im,(x10,y10),5,(0,255,0),-1)
-
-          x11 = int(x01 - TRANSFORM_Y*(-b_neg))
-          y11 = int(y01 - TRANSFORM_Y*(a_neg))
-          cv2.circle(im,(x11,y11),5,(0,255,0),-1)
-
-          tmp_x00,tmp_y00 = x00,y00
-          x00,y00 = x01,y01
-          x01,y01 = x11,y11
-          x11,y11 = x10,y10
-          x10,y10 = tmp_x00,tmp_y00
-        else:
-          #TRANSFORM_X = 200
-          #TRANSFORM_Y = 600
-          a_pos = np.cos(lines_to_draw[0][0])
-          b_pos = np.sin(lines_to_draw[0][0])
-          a_neg = np.cos(lines_to_draw[1][0])
-          b_neg = np.sin(lines_to_draw[1][0])
-
-          x01 = int(x00 + TRANSFORM_Y*(-b_pos))
-          y01 = int(y00 + TRANSFORM_Y*(a_pos))
-          x10 = int(x00 - TRANSFORM_X*(-b_neg))
-          y10 = int(y00 - TRANSFORM_X*(a_neg))
-          cv2.circle(im,(x01,y01),5,(0,255,0),-1)
-          cv2.circle(im,(x10,y10),5,(0,255,0),-1)
-
-          x11 = int(x01 - TRANSFORM_X*(-b_neg))
-          y11 = int(y01 - TRANSFORM_X*(a_neg))
-          cv2.circle(im,(x11,y11),5,(0,255,0),-1)
-
-        # warp perspective 
-        #MAX_SHAPE = 400
-        X_SHAPE = MAX_SHAPE/TRANSFORM_X_SHAPE
-        Y_SHAPE = MAX_SHAPE/TRANSFORM_Y_SHAPE
-        pts1 = np.float32(((x00,y00), (x01,y01),
-                  (x11,y11), (x10,y10)))
-        pts2 = np.float32(((MAX_SHAPE-X_SHAPE, MAX_SHAPE-Y_SHAPE), (MAX_SHAPE-X_SHAPE, MAX_SHAPE+Y_SHAPE),
-                  (MAX_SHAPE+X_SHAPE, MAX_SHAPE+Y_SHAPE), (MAX_SHAPE+X_SHAPE, MAX_SHAPE-Y_SHAPE)))
-        M = cv2.getPerspectiveTransform(pts1,pts2)
-        warp = cv2.warpPerspective(im,M,(1000,1000))
-        cv2.imshow('final',warp)
-
-      else:
-        if(lines_to_draw==[None,None]):
-          print("missing both")
-        elif(lines_to_draw[0]==None):
-          print("missing positive slope")
-        elif(lines_to_draw[1]==None):
-          print("missing negative slope")
-        for theta,rhos in radial.items():
-          for rho in rhos:
-            a = np.cos(theta)
-            b = np.sin(theta)
-            x0 = a*rho
-            y0 = b*rho
-            x1 = int(x0 + 1500*(-b))
-            y1 = int(y0 + 1500*(a))
-            x2 = int(x0 - 1500*(-b))
-            y2 = int(y0 - 1500*(a))
-            cv2.line(im,(x1,y1),(x2,y2),(0,0,255),2)
-      
-    # for blue board line use
-    if(lines is not None):
-      best = None
-      for line in lines:
-        for x1,y1,x2,y2 in line:
-          yellow_contours.append((x1,y1,x2,y2))
   # =================================
   # generate red mask
   red_x = None
