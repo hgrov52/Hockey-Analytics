@@ -1,5 +1,6 @@
-import cv2,os,collections
+import cv2,os,sys
 import numpy as np
+sys.path.append('../research code/color filtering/')
 import find_color_filter
 
 """
@@ -14,21 +15,6 @@ that area in N frames, then it is an inconsistency
 
 
 """
-
-def init_values(im,file_num):
-  
-  cv2.imshow('im',im)
-  k = cv2.waitKey(0)
-  cv2.destroyWindow('im')
-  if(k == 32): # space bar iterate by 1
-    return None,None,None,None,False,file_num+1
-  if(k == 120): # x iterate by 50
-    return None,None,None,None,False,file_num+50
-  if(k == 98): # b backwards iterate by 1
-    return None,None,None,None,False,file_num+-1
-  if(k == 13):
-    return find_color_filter.find_color_values(im),True
-    
 
 def in_line_with_yellow_contours(im,cX,cY,yellow_contours,y_threshold=50):
   closest = []
@@ -101,7 +87,7 @@ else:
 
 # Loop to test color vals
 # =========================================
-lst = sorted(os.listdir(os.fsencode('../Frame_Images/ACHA UNH')))
+lst = sorted(os.listdir(os.fsencode('../../data/frames/continuous/ACHA UNH/')))
 file_num = 0
 prev_thetas = []
 RECENT_AVG_LEN = 2
@@ -123,7 +109,7 @@ while file_num < len(lst):
     file_num+=1
     continue
 
-  im = cv2.imread('../Frame_Images/ACHA UNH/'+filename)
+  im = cv2.imread('../../data/frames/continuous/ACHA UNH/'+filename)
   hsv = cv2.cvtColor(im, cv2.COLOR_BGR2HSV)
 
 

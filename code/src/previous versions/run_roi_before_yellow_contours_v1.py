@@ -1,5 +1,6 @@
-import cv2,os
+import cv2,os,sys
 import numpy as np
+sys.path.append('../../research code/color filtering/')
 import find_color_filter
 
 """
@@ -24,7 +25,7 @@ def init_values(im,file_num):
   if(k == 13):
     return find_color_filter.find_color_values(im),True
     
-vidcap = cv2.VideoCapture('../Frame_Images/ACHA UNH/ACHA_vid.mp4')
+vidcap = cv2.VideoCapture('../../../data/video/ACHA_vid.mp4')
 
 Rr2 = None
 blue,yellow,red = True,True,True
@@ -66,7 +67,7 @@ else:
 
 # Loop to test color vals
 # =========================================
-lst = sorted(os.listdir(os.fsencode('../Frame_Images/ACHA UNH')))
+lst = sorted(os.listdir(os.fsencode('../../../data/frames/continuous/ACHA UNH/')))
 file_num = 0
 while file_num < len(lst):
   file = lst[file_num]
@@ -75,7 +76,7 @@ while file_num < len(lst):
     file_num+=1
     continue
 
-  im = cv2.imread('../Frame_Images/ACHA UNH/'+filename)
+  im = cv2.imread('../../../data/frames/continuous/ACHA UNH/'+filename)
   hsv = cv2.cvtColor(im, cv2.COLOR_BGR2HSV)
   # =================================
   # generate yellow mask
