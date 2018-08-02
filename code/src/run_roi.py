@@ -1,6 +1,6 @@
 import cv2,os,sys
 import numpy as np
-sys.path.append('../research code/color filtering/')
+sys.path.append('../utils/')
 import find_color_filter
 
 """

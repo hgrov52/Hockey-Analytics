@@ -1,7 +1,13 @@
-# Dont Upload Data
+# Avoid Data
 *.jpg
 *.mp4
 *.avi
+
+# Avoid Cache
+__pycache__/
+
+# Dont include these files
+code/research code/panorama/cbuntain
 
 
 
