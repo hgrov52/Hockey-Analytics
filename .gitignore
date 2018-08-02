@@ -1,9 +1,7 @@
-# Folders
-ACHA UNH/
-2018 cornell 0223/
-similarity/
-video/
-
+# Dont Upload Data
+*.jpg
+*.mp4
+*.avi
 
 
 
