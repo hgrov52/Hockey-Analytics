@@ -146,9 +146,9 @@ if __name__ == '__main__':
 
 	"""
 
-	im1 = cv2.resize(cv2.imread('../frame1094.jpg'),(480, 320))
-	im2 = cv2.resize(cv2.imread('../frame1039.jpg'),(480, 320))
-	im3 = cv2.resize(cv2.imread('../frame907.jpg'),(480, 320))
+	im1 = cv2.resize(cv2.imread('frame1094.jpg'),(480, 320))
+	im2 = cv2.resize(cv2.imread('frame1039.jpg'),(480, 320))
+	im3 = cv2.resize(cv2.imread('frame907.jpg'),(480, 320))
 	result = im1
 	result = s.leftshift(result,im2)
 	cv2.imshow('r',result)

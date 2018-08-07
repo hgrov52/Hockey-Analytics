@@ -24,27 +24,15 @@ TRANSFORM_X_SHAPE = 20
 TRANSFORM_Y_SHAPE = 5
 MAX_SHAPE = 400
 
-# lines must be in the form (theta, rho) or [theta, rho]
-# returns two vars: x,y
-def find_intersection_point(line1,line2):
-    A=np.array([[np.cos(line1[0]),np.sin(line1[0])],
-                [np.cos(line2[0]),np.sin(line2[0])]])
-    B=np.array([[line1[1]],
-                [line2[1]]])
-    x00, y00 = np.linalg.solve(A, B)
-    return int(np.round(x00)), int(np.round(y00))
-
-def find_point_along_line(x00,y00,theta):
-    return
-
 def generate_points(im, warp_lines, draw=False):
     """
 
     mark lines as left, right, top, bottom
 
     """
-    
-    top = left = bottom = right = None
+    A = []
+    B = []
+    x00 = y00 = x10 = y10 = x01 = y01 = left = None
     steep_pos_slope = []
     steep_neg_slope = []
     horiz_lines = []
@@ -60,10 +48,14 @@ def generate_points(im, warp_lines, draw=False):
         if(1.45<theta and theta<1.72):
             horiz_lines.append((theta,rho))
     if(len(horiz_lines)>0):
-        top = min(horiz_lines,key=lambda x:x[1])
         # side of the ice
         if(len(steep_pos_slope)>0):
             left = max(steep_pos_slope,key=lambda x:x[0])
+            top = min(horiz_lines,key=lambda x:x[1])
+            A.append([np.cos(left[0]),np.sin(left[0])])
+            B.append([left[1]])
+            A.append([np.cos(top[0]),np.sin(top[0])])
+            B.append([top[1]])
             steep_pos_slope.remove(left)
             for x in steep_pos_slope:
                 extra_vertical_line.append(x)
@@ -72,40 +64,65 @@ def generate_points(im, warp_lines, draw=False):
         # right side of the ice
         elif(len(steep_neg_slope)>0):
             left = max(steep_neg_slope,key=lambda x:x[0])
+            top = min(horiz_lines,key=lambda x:x[1])
+            A.append([np.cos(left[0]),np.sin(left[0])])
+            B.append([left[1]])
+            A.append([np.cos(top[0]),np.sin(top[0])])
+            B.append([top[1]])
+            steep_neg_slope.remove(left)
             for x in steep_neg_slope:
                 extra_vertical_line.append(x)
             for x in steep_pos_slope:
                 extra_vertical_line.append(x)
+
+
+    if(len(A)>0 and len(B)>0):
+        # solve for intersection point
+        A = np.array(A)
+        B = np.array(B)
+        x00, y00 = np.linalg.solve(A, B)
+        x00, y00 = int(np.round(x00)), int(np.round(y00))
         
+        if(draw):
+            cv2.circle(im, (x00, y00), 5, (0, 255, 0), -1)
+    A = []
+    B = []
+    # if 3 lines
     if(len(extra_vertical_line)>0):
-        right = extra_vertical_line[0]
+        top = min(horiz_lines,key=lambda x:x[1])
+        A.append([np.cos(extra_vertical_line[0][0]),np.sin(extra_vertical_line[0][0])])
+        B.append([extra_vertical_line[0][1]])
+        A.append([np.cos(top[0]),np.sin(top[0])])
+        B.append([top[1]])
+        if(len(A)>0 and len(B)>0):
+            # solve for intersection point
+            A = np.array(A)
+            B = np.array(B)
+            x10, y10 = np.linalg.solve(A, B)
+            x10, y10 = int(np.round(x10)), int(np.round(y10))
+        
+            if(draw):
+                cv2.circle(im, (x10, y10), 5, (0, 255, 0), -1)
 
-    print("\ntop | lft | btm | rht")
-    print(top!=None,left!=None,bottom!=None,right!=None)
-
-    if(left == None or top == None):
-        return
-
-    x00,y00 = find_intersection_point(top,left)
-    cv2.circle(im,(x00,y00),5,(0,255,0),-1)
-
-    if(right == None):
-        x10,y10 = find_intersection_point(top,right)
-    else:
-        x10,y10 = 
-
-
-
-
-def get_ratio(blue_lines,yellow_line):
-
-    return
     
+    """
+    A.append([np.cos(theta),np.sin(theta)])
+    B.append([rho])
+        
+
+    # solve for intersection point
+    A = np.array(A)
+    B = np.array(B)
+    x00, y00 = np.linalg.solve(A, B)
+    x00, y00 = int(np.round(x00)), int(np.round(y00))
+    
+    
+    """
 
 def warp_image(im,warp_lines, draw=False):
 
 
-    
+
     if(draw):
         for theta,rho in warp_lines:
             a = np.cos(theta)

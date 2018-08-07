@@ -19,6 +19,7 @@ def define_lines(im,draw = False):
     for line in lines2:
       for rho,theta in line:
         radial.setdefault(theta,[]).append(rho)
+  negative_slope = {}
   if(len(radial.keys())>0):
     rad_min = min(radial.keys())
     rad_max = max(radial.keys())
@@ -53,6 +54,27 @@ def define_lines(im,draw = False):
       if(corner_lines[1] == None and len(negative_slope.keys())>0):
         theta = max(negative_slope.keys())
         corner_lines[1] = [theta,max(negative_slope[theta])]
+    # else we just need a horizontal yellow line
+    else:
+
+      positive_slope = {theta: rhos for theta,rhos in radial.items() if (theta<HORIZONTAL_RADIANS )} 
+      negative_slope = {theta: rhos for theta,rhos in radial.items() if (theta>HORIZONTAL_RADIANS )}
+      
+      #print("|"+str(len(positive_slope.keys()))+"|"+str(len(negative_slope.keys()))+"|"+str(len(radial.keys()))+"|")
+      if(len(positive_slope.keys())>len(negative_slope.keys())):
+        theta_avg = [sum(positive_slope.keys())/len(positive_slope.keys())]
+        best_index = 50
+        for theta in positive_slope.keys():
+          if(abs(theta-theta_avg[0])<abs(best_index-theta_avg[0])):
+            best_index = theta
+        corner_lines = [[best_index,min(positive_slope[best_index])]]
+      else:
+        theta_avg = [sum(negative_slope.keys())/len(negative_slope.keys())]
+        best_index = 50
+        for theta in negative_slope.keys():
+          if(abs(theta-theta_avg[0])<abs(best_index-theta_avg[0])):
+            best_index = theta
+        corner_lines = [[best_index,max(negative_slope[best_index])]]
 
   if(draw):
     for theta,rhos in radial.items():
@@ -73,4 +95,7 @@ def define_lines(im,draw = False):
     for line in lines:
       for x1,y1,x2,y2 in line:
         yellow_contours.append((x1,y1,x2,y2))
+
+  while(None in corner_lines):
+    corner_lines.remove(None)
   return yellow_contours,corner_lines

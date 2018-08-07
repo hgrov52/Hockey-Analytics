@@ -152,9 +152,9 @@ if __name__ == '__main__':
 		print(str(float(count)/float(l)*100)+"%")
 		images.append(cv2.imread('../../Frame_Images/ACHA UNH/'+filename))
 	"""
-	images.append(cv2.imread('../frame1094.jpg'))
-	images.append(cv2.imread('../frame1039.jpg'))
-	images.append(cv2.imread('../frame907.jpg'))
+	images.append(cv2.imread('frame1094.jpg'))
+	images.append(cv2.imread('frame1039.jpg'))
+	images.append(cv2.imread('frame907.jpg'))
 	s = Stitch(images)
 	s.leftshift()
 	# s.showImage('left')

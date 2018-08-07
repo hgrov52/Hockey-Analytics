@@ -114,10 +114,12 @@ while file_num < len(lst):
 
   # =================================
   # blue line
-  blue_lines = [None,None]
   if(blue_line):
-    blue_lines = on_ice_blue_line.define_lines(im,draw=True)
-    print(blue_lines)
+    blue_lines = on_ice_blue_line.define_lines(im,draw=False)
+
+  while(None in blue_lines):
+    blue_lines.remove(None)
+
     
       
   # =================================
@@ -125,11 +127,15 @@ while file_num < len(lst):
   if(yellow):
     info = [TRANSFORM_X,TRANSFORM_Y,TRANSFORM_X_SHAPE,TRANSFORM_Y_SHAPE,MAX_SHAPE]
     yellow_contours,warp_lines = on_ice_yellow_line.define_lines(im,draw=False)
+    
+    if(len(blue_lines)==2):
+      warp_image.get_ratio(blue_lines,warp_lines)
 
-    if(warp_lines[0]!=None and warp_lines[1]!=None):
-      
+    for line in blue_lines:
+      if(line != None):
+        warp_lines.append(line)
 
-      warp_image.warp_image(im,warp_lines,draw=False)
+    warp_image.warp_image(im,warp_lines,draw=True)
 
   # =================================
   # generate red mask
