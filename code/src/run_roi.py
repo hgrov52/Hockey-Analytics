@@ -4,6 +4,7 @@ from utils import find_color_filter
 from utils import on_ice_blue_line
 from utils import on_ice_yellow_line
 from utils import warp_image
+from utils import get_bottom_boards
 
 """
 REVISE:
@@ -45,10 +46,10 @@ def in_line_with_yellow_contours(im,cX,cY,yellow_contours,y_threshold=50):
     return best[1]
   return False
 
-vidcap = cv2.VideoCapture('../Frame_Images/ACHA UNH/ACHA_vid.mp4')
+vidcap = cv2.VideoCapture('../../data/video/ACHA_vid.mp4')
 
 Rr2 = None
-blue,yellow,red,goal_line,blue_line = False,True,False,False,True
+blue,yellow,red,goal_line,blue_line,bottom = False,True,False,False,True,False
 success = True
 outer = False
 detect_colors = False
@@ -97,7 +98,7 @@ blue_y_recent_avg_R = []
 
 TRANSFORM_X = 200
 TRANSFORM_Y = 600
-TRANSFORM_X_SHAPE = 20
+TRANSFORM_X_SHAPE = 5
 TRANSFORM_Y_SHAPE = 5
 MAX_SHAPE = 400
 
@@ -111,14 +112,20 @@ while file_num < len(lst):
   im = cv2.imread('../../data/frames/continuous/ACHA UNH/'+filename)
   hsv = cv2.cvtColor(im, cv2.COLOR_BGR2HSV)
 
+  if(bottom):
+    get_bottom_boards.define_line(im,draw=True)
 
   # =================================
   # blue line
   if(blue_line):
     blue_lines = on_ice_blue_line.define_lines(im,draw=False)
 
-  while(None in blue_lines):
-    blue_lines.remove(None)
+    while(None in blue_lines):
+      blue_lines.remove(None)
+
+    im_rev = im[:,:,::-1]
+
+    blue_lines2 = on_ice_blue_line.define_lines(im_rev,draw=True)
 
     
       
@@ -135,7 +142,7 @@ while file_num < len(lst):
       if(line != None):
         warp_lines.append(line)
 
-    warp_image.warp_image(im,warp_lines,draw=True)
+    warp_image.warp_image(im,warp_lines,draw=True, params = info)
 
   # =================================
   # generate red mask
