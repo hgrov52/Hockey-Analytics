@@ -1,10 +1,21 @@
 from __future__ import print_function
 import numpy as np
 import cv2
+import camera_stitch
 
 def build_panorama():
-	import camera_stitch
-	vidcap = cv2.VideoCapture('../Frame_Images/ACHA UNH/ACHA_vid.mp4')
+	im1 = cv2.imread('frame907.jpg')
+	im2 = cv2.imread('frame911.jpg')
+	result,vis = camera_stitch.stitch([im1,im2],showMatches=False)
+	cv2.imshow('matches',vis)
+	cv2.imshow('result',result)
+	k = cv2.waitKey(0)
+	if(k==27):
+		cv2.destroyAllWindows()
+
+def build_panorama2():
+	
+	vidcap = cv2.VideoCapture('../../../data/video/ACHA_vid.mp4')
 	result = None
 	success = True
 	count = 0
@@ -16,7 +27,7 @@ def build_panorama():
 			continue
 		
 		if(count%20 == 0):
-
+			cv2.destroyAllWindows()
 			(result,vis) = camera_stitch.stitch([result,image],showMatches=True)
 			cv2.imshow('matches',vis)
 			cv2.imshow('result',result)
@@ -26,8 +37,17 @@ def build_panorama():
 		count+=1
 	cv2.destroyAllWindows()
 
+"""
 
-def build_panorama2():
+numpy.fill
+
+1. define array of zeros size of result
+2. in that array you can set a range 
+
+"""
+
+
+def build_panorama3():
 	import camera_stitch
 	images = []
 	images.append(cv2.imread('frame907.jpg'))
@@ -42,20 +62,8 @@ def build_panorama2():
 def build_panorama3():
 
 
-	# Read reference image
-	refFilename = "frame910.jpg"
-	print("Reading reference image : ", refFilename)
-	imReference = cv2.imread(refFilename, cv2.IMREAD_COLOR)
-
-	# Read image to be aligned
-	imFilename = "frame908.jpg"
-	print("Reading image to align : ", imFilename);  
-	im = cv2.imread(imFilename, cv2.IMREAD_COLOR)
-
-
-	im1 = im
-	im2 = imReference
-	
+	im1 = cv2.imread('frame907.jpg')
+	im2 = cv2.imread('frame1039.jpg')
 	
 	MAX_FEATURES = 500
 	GOOD_MATCH_PERCENT = 0.15
@@ -134,4 +142,4 @@ def remove_differences():
 		cv2.destroyAllWindows()
 
 if __name__ == '__main__':
-	build_panorama2()
+	build_panorama()

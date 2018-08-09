@@ -8,6 +8,7 @@ def stitch(images, ratio=0.75, reprojThresh=4.0,
 	(imageB, imageA) = images
 	(kpsA, featuresA) = detectAndDescribe(imageA)
 	(kpsB, featuresB) = detectAndDescribe(imageB)
+
 	# match features between the two images
 	M = matchKeypoints(kpsA, kpsB,
 		featuresA, featuresB, ratio, reprojThresh)
@@ -25,19 +26,34 @@ def stitch(images, ratio=0.75, reprojThresh=4.0,
 	(matches, H, status) = M
 	result = cv2.warpPerspective(imageA, H,
 		(imageA.shape[1] + imageB.shape[1], imageA.shape[0]))
-	cv2.imshow('r',result)
-	cv2.waitKey(0)
+	#cv2.imshow('r',result)
+	#cv2.waitKey(0)
 	result[0:imageB.shape[0], 0:imageB.shape[1]] = imageB
-	# check	 to see if the keypoint matches should be visualized
+
+
+
+	avgA, avgB = find_shift(kpsA, kpsB, matches, status)
+	print(avgA,avgB)
+	cv2.circle(imageA, avgA, 3, (0, 255, 0), -1)
+	cv2.circle(imageB, avgB, 3, (0, 255, 0), -1)
+	cv2.imshow('imageA',imageA)
+	cv2.imshow('imageB',imageB)
+	cv2.waitKey(0)
+	cv2.destroyWindow('imageA')
+	cv2.destroyWindow('imageB')
+
+	print(imageA.shape)
+	result = np.zeros((imageA.shape[0]+abs(avgA[0]-avgB[0]),imageA.shape[1]+abs(avgA[0]-avgB[0]),imageA.shape[2]))
+	print(result)
+	cv2.imshow('zeros',result)
+	cv2.waitKey(0)
+	cv2.destroyAllWindows()
+
 	if showMatches:
 		vis = drawMatches(imageA, imageB, kpsA, kpsB, matches,
 			status)
-
-		# return a tuple of the stitched image and the
-		# visualization
 		return (result, vis)
 
-	# return the stitched image
 	return result
 
 
@@ -52,6 +68,7 @@ def detectAndDescribe(image):
 	# convert the keypoints from KeyPoint objects to NumPy
 	# arrays
 	kps = np.float32([kp.pt for kp in kps])
+	print(kps)
 
 	# return a tuple of keypoints and features
 	return (kps, features)
@@ -109,3 +126,22 @@ def drawMatches(imageA, imageB, kpsA, kpsB, matches, status):
 
 	# return the visualization
 	return vis
+
+def find_shift(kpsA, kpsB, matches, status):
+	avgA=[0,0]
+	avgB=[0,0]
+
+	# loop over the matches
+	for ((trainIdx, queryIdx), s) in zip(matches, status):
+		# only process the match if the keypoint was successfully
+		# matched
+		if s == 1:
+			ptA = (int(kpsA[queryIdx][0]), int(kpsA[queryIdx][1]))
+			ptB = (int(kpsB[trainIdx][0]), int(kpsB[trainIdx][1]))
+			
+			avgA[0]+=ptA[0]/len(kpsA)
+			avgA[1]+=ptA[1]/len(kpsA)
+			avgB[0]+=ptB[0]/len(kpsB)
+			avgB[1]+=ptB[1]/len(kpsB)
+			
+	return (int(avgA[0]),int(avgA[1])),(int(avgB[0]),int(avgB[1]))

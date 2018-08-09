@@ -49,7 +49,7 @@ def in_line_with_yellow_contours(im,cX,cY,yellow_contours,y_threshold=50):
 vidcap = cv2.VideoCapture('../../data/video/ACHA_vid.mp4')
 
 Rr2 = None
-blue,yellow,red,goal_line,blue_line,bottom = False,True,False,False,True,False
+blue,yellow,red,goal_line,blue_line,bottom = True,True,True,True,True,False
 success = True
 outer = False
 detect_colors = False
