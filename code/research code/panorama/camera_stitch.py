@@ -1,11 +1,12 @@
 import cv2, imutils
 import numpy as np
+import matplotlib.pyplot as plt
 
 def stitch(images, ratio=0.75, reprojThresh=4.0,
 	showMatches=False):
 	# unpack the images, then detect keypoints and extract
 	# local invariant descriptors from them
-	(imageB, imageA) = images
+	(imageA, imageB) = images
 	(kpsA, featuresA) = detectAndDescribe(imageA)
 	(kpsB, featuresB) = detectAndDescribe(imageB)
 
@@ -17,9 +18,7 @@ def stitch(images, ratio=0.75, reprojThresh=4.0,
 	# keypoints to create a panorama
 	if M is None:
 		return None
-	print(M[0])
-	print(M[1])
-	print(M[2])
+	
 
 	# otherwise, apply a perspective warp to stitch the images
 	# together
@@ -28,7 +27,7 @@ def stitch(images, ratio=0.75, reprojThresh=4.0,
 		(imageA.shape[1] + imageB.shape[1], imageA.shape[0]))
 	#cv2.imshow('r',result)
 	#cv2.waitKey(0)
-	result[0:imageB.shape[0], 0:imageB.shape[1]] = imageB
+	#result[0:imageB.shape[0], 0:imageB.shape[1]] = imageB
 
 
 
@@ -36,18 +35,18 @@ def stitch(images, ratio=0.75, reprojThresh=4.0,
 	print(avgA,avgB)
 	cv2.circle(imageA, avgA, 3, (0, 255, 0), -1)
 	cv2.circle(imageB, avgB, 3, (0, 255, 0), -1)
-	cv2.imshow('imageA',imageA)
-	cv2.imshow('imageB',imageB)
-	cv2.waitKey(0)
-	cv2.destroyWindow('imageA')
-	cv2.destroyWindow('imageB')
+	#cv2.imshow('imageA',imageA)
+	#cv2.imshow('imageB',imageB)
 
-	print(imageA.shape)
-	result = np.zeros((imageA.shape[0]+abs(avgA[0]-avgB[0]),imageA.shape[1]+abs(avgA[0]-avgB[0]),imageA.shape[2]))
-	print(result)
-	cv2.imshow('zeros',result)
-	cv2.waitKey(0)
-	cv2.destroyAllWindows()
+	
+	result = append_images(imageA,imageB,avgA,avgB)
+	
+	
+
+	#cv2.imshow('result',result)
+	#cv2.waitKey(0)
+	#result = np.zeros((imageA.shape[0]+abs(avgA[0]-avgB[0]),imageA.shape[1]+abs(avgA[0]-avgB[0]),imageA.shape[2]))
+	#cv2.destroyAllWindows()
 
 	if showMatches:
 		vis = drawMatches(imageA, imageB, kpsA, kpsB, matches,
@@ -56,6 +55,23 @@ def stitch(images, ratio=0.75, reprojThresh=4.0,
 
 	return result
 
+def append_images(imageA,imageB,avgA,avgB):
+	shift_x = avgA[0]-avgB[0]
+	shift_y = avgA[1]-avgB[1]
+	right,shift_x = (abs(shift_x),0) if shift_x<0 else (0,shift_x) 
+	down,shift_y = (abs(shift_y),0) if shift_y<0 else (0,shift_y) 
+	result = np.zeros((max(imageA.shape[0]+shift_y,imageB.shape[0]+down),max(imageA.shape[1]+shift_x,imageB.shape[1]+right),3))
+	result[:,:]=-np.inf
+	#print(imageA.shape,result.shape)
+	result[shift_y:(imageA.shape[0]+shift_y),shift_x:(imageA.shape[1]+shift_x),:]=\
+	np.where(result[shift_y:(imageA.shape[0]+shift_y),shift_x:(imageA.shape[1]+shift_x),:]==-np.inf,\
+	imageA,result[shift_y:(imageA.shape[0]+shift_y),shift_x:(imageA.shape[1]+shift_x),:])
+	result[down:(imageB.shape[0]+down),right:(imageB.shape[1]+right),:]= \
+	np.where(result[down:(imageB.shape[0]+down),right:(imageB.shape[1]+right),:]==-np.inf, \
+	imageB,result[down:(imageB.shape[0]+down),right:(imageB.shape[1]+right),:])
+
+	result = result.astype(np.uint8)
+	return result
 
 def detectAndDescribe(image):
 	# convert the image to grayscale
@@ -68,7 +84,7 @@ def detectAndDescribe(image):
 	# convert the keypoints from KeyPoint objects to NumPy
 	# arrays
 	kps = np.float32([kp.pt for kp in kps])
-	print(kps)
+	#print(kps)
 
 	# return a tuple of keypoints and features
 	return (kps, features)

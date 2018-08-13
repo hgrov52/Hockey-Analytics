@@ -2,17 +2,52 @@ from __future__ import print_function
 import numpy as np
 import cv2
 import camera_stitch
+import matplotlib.pyplot as plt
 
 def build_panorama():
-	im1 = cv2.imread('frame907.jpg')
-	im2 = cv2.imread('frame911.jpg')
-	result,vis = camera_stitch.stitch([im1,im2],showMatches=False)
-	cv2.imshow('matches',vis)
-	cv2.imshow('result',result)
-	k = cv2.waitKey(0)
-	if(k==27):
-		cv2.destroyAllWindows()
 
+
+
+	vidcap = cv2.VideoCapture('../../../data/video/ACHA_vid.mp4')
+	result = None
+	success = True
+	outer = False
+	while success:
+		success,image = vidcap.read()
+		cv2.imshow('image',image)
+		k = cv2.waitKey(1)
+		if(k == 27):
+			cv2.destroyAllWindows()
+			exit(1)
+		if(k==32):
+			while(1):
+				success,image = vidcap.read()
+				cv2.imshow('image',image)
+				k = cv2.waitKey(0)
+				if(result is None):
+					result = image
+					continue
+				
+				result= camera_stitch.stitch([result,image],showMatches=False)
+				cv2.imshow('result',result)
+				k = cv2.waitKey(0)
+				if(k==27):
+					outer = True
+					break
+		if(outer):
+			break
+	cv2.destroyAllWindows()
+
+
+
+
+
+
+
+
+
+
+	
 def build_panorama2():
 	
 	vidcap = cv2.VideoCapture('../../../data/video/ACHA_vid.mp4')
