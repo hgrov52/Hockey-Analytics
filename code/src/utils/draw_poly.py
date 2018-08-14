@@ -29,7 +29,7 @@ def on_mouse(event, x, y, flags, params):
 count = 0
 while(1):
     count += 1
-    img = cv2.imread('acha1.jpg',0)
+    img = cv2.imread('image name here')
     # img = cv2.blur(img, (3,3))
     img = cv2.resize(img, None, fx = 0.25,fy = 0.25)
 

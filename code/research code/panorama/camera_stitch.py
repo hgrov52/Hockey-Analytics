@@ -23,24 +23,23 @@ def stitch(images, ratio=0.75, reprojThresh=4.0,
 	# otherwise, apply a perspective warp to stitch the images
 	# together
 	(matches, H, status) = M
-	result = cv2.warpPerspective(imageA, H,
-		(imageA.shape[1] + imageB.shape[1], imageA.shape[0]))
+	#result = cv2.warpPerspective(imageA, H,(imageA.shape[1] + imageB.shape[1], imageA.shape[0]))
 	#cv2.imshow('r',result)
 	#cv2.waitKey(0)
 	#result[0:imageB.shape[0], 0:imageB.shape[1]] = imageB
 
 
 
-	avgA, avgB = find_shift(kpsA, kpsB, matches, status)
-	print(avgA,avgB)
+	avgA, avgB, rngA, rngB = find_shift(kpsA, kpsB, matches, status)
+	print(rngA,rngB)
 	cv2.circle(imageA, avgA, 3, (0, 255, 0), -1)
 	cv2.circle(imageB, avgB, 3, (0, 255, 0), -1)
 	#cv2.imshow('imageA',imageA)
 	#cv2.imshow('imageB',imageB)
 
 	
-	result = append_images(imageA,imageB,avgA,avgB)
-	
+	#result = append_images(imageA,imageB,avgA,avgB)
+	result = imageA
 	
 
 	#cv2.imshow('result',result)
@@ -147,6 +146,15 @@ def find_shift(kpsA, kpsB, matches, status):
 	avgA=[0,0]
 	avgB=[0,0]
 
+	maxxA = -np.inf
+	maxyA = -np.inf
+	minxA = np.inf
+	minyA = np.inf
+
+	maxxB = -np.inf
+	maxyB = -np.inf
+	minxB = np.inf
+	minyB = np.inf
 	# loop over the matches
 	for ((trainIdx, queryIdx), s) in zip(matches, status):
 		# only process the match if the keypoint was successfully
@@ -155,9 +163,27 @@ def find_shift(kpsA, kpsB, matches, status):
 			ptA = (int(kpsA[queryIdx][0]), int(kpsA[queryIdx][1]))
 			ptB = (int(kpsB[trainIdx][0]), int(kpsB[trainIdx][1]))
 			
+			if(ptA[0]>maxxA):
+				maxxA = ptA[0]
+			if(ptA[0]<minxA):
+				minxA = ptA[0]
+			if(ptA[1]>maxyA):
+				maxyA = ptA[1]
+			if(ptA[1]<minyA):
+				minyA = ptA[1]
+
+			if(ptB[0]>maxxB):
+				maxxB = ptB[0]
+			if(ptB[0]<minxB):
+				minxB = ptB[0]
+			if(ptB[1]>maxyB):
+				maxyB = ptB[1]
+			if(ptB[1]<minyB):
+				minyB = ptB[1]
+
 			avgA[0]+=ptA[0]/len(kpsA)
 			avgA[1]+=ptA[1]/len(kpsA)
 			avgB[0]+=ptB[0]/len(kpsB)
 			avgB[1]+=ptB[1]/len(kpsB)
 			
-	return (int(avgA[0]),int(avgA[1])),(int(avgB[0]),int(avgB[1]))
+	return (int(avgA[0]),int(avgA[1])),(int(avgB[0]),int(avgB[1])), ((maxxA - minxA),(maxyA - minyA)), ((maxxB - minxB),(maxyB - minyB))
