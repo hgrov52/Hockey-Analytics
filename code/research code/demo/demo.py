@@ -3,7 +3,7 @@ import numpy as np
 
 ground_truths = {'Red Line':(100,0),
 				 'Blue Line':{'right': (125,0),'left': (75,0)},
-				 'Goal Line':{'right': (189,0),'left': (11,0)},
+				 'Goal Line':{'right': (189,-2),'left': (11,-2)},
 				 'Center ice':(100,42.5),
 				 'Neutral Faceoff Dot':{"['right', 'top']":(120,20.5),
 				 						"['bottom', 'right']":(120,64.5),
@@ -52,6 +52,23 @@ def trim_warp_points(pts1,pts2):
 				pts1.remove(pts1[i])
 				redo = True
 				break
+
+def draw_ice(im, xo = 0, yo = 0, xm = 1, ym = 1):
+	# red line
+	cv2.line(im,(100*xm-xo,yo),(100*xm-xo,85*ym),(0,0,255),2)
+	# blue line
+	cv2.line(im,(125*xm-xo,yo),(125*xm-xo,85*ym),(255,0,0),2)
+	# goal line
+	cv2.line(im,(189*xm-xo,yo),(189*xm-xo,85*ym),(0,0,255),2)
+	# yellow lines
+	cv2.line(im,(xo,yo),(200*xm-int(xo/2),yo),(0,255,255),2)
+	cv2.line(im,(200*xm-int(xo/2),yo),(200*xm-int(xo/2),85*ym),(0,255,255),2)
+	# neutral faceoff circles
+	cv2.line(im,(120*xm-xo,yo),(120*xm-xo,85*ym),(0,0,255),2)
+	# zone faceoff circles
+	cv2.line(im,(169*xm-xo,yo),(169*xm-xo,85*ym),(0,0,255),2)
+	# horizontal faceoff circles
+	cv2.line(im,(xo,int(20.5*ym+yo)),(200*xm-xo,int(20.5*ym+yo)),(0,0,255),2)
 	
 
 
@@ -75,10 +92,9 @@ def init():
 
 
 			# ===========
-			primary = True
-			for label in image['Label']:
+			for label in sorted(image['Label']):
 				if(label in ['Inner Hash Mark']):
-					primary = False
+
 					supplemental[image['External ID']] = []
 
 					# =========================
@@ -86,7 +102,7 @@ def init():
 					for feature in image['Label'][label]:
 						desc = str(feature['side'][1] + " " + feature['side'][0] if len(feature['side'])==2 else feature['side'])
 						#print(label,desc,"|",ground_truths[label][str(feature['side'])],"|",(feature['geometry']['x'],feature['geometry']['y']))
-						supplemental[image['External ID']] += {'truth':ground_truths[label][str(sorted(feature['side']) if len(feature['side'])<4 else feature['side'])],'image':(feature['geometry']['x'],height-feature['geometry']['y']),'description':label+" "+desc}
+						supplemental[image['External ID']].append({'truth':ground_truths[label][str(sorted(feature['side']) if len(feature['side'])<4 else feature['side'])],'image':(feature['geometry']['x'],height-feature['geometry']['y']),'description':label+" "+desc})
 						index+=1
 					# ==========================
 
@@ -99,8 +115,7 @@ def init():
 						#print(label,desc,"|",ground_truths[label][str(feature['side'])],"|",(feature['geometry']['x'],feature['geometry']['y']))
 						features[index] = {'truth':ground_truths[label][str(sorted(feature['side']) if len(feature['side'])<4 else feature['side'])],'image':(feature['geometry']['x'],height-feature['geometry']['y']),'description':label+" "+desc}
 						index+=1
-			if(primary):
-				dataset.append(features)
+			dataset.append(features)
 			
 	return dataset,supplemental
 
@@ -113,7 +128,11 @@ if __name__ == '__main__':
 	pp = pprint.PrettyPrinter(indent=4)
 	#pp.pprint(dataset)
 
-	for frame in dataset:
+	print(len(dataset))
+	i=0
+	while(i<len(dataset)):
+		frame = dataset[i]
+		i+=1
 		print(frame['filename'])
 		im = cv2.imread('../../../data/frames/continuous/chances/'+frame['filename'])
 		pts1 = []
@@ -138,8 +157,11 @@ if __name__ == '__main__':
 
 		trim_warp_points(pts1,pts2)
 		if(len(pts2)<4):
-			print(supplemental)
-			continue
+			if(frame['filename'] in supplemental):
+				pp.pprint(supplemental[frame['filename']])
+			else:
+				print("No Further Points")
+				#pp.pprint(supplemental)
 				
 			
 
@@ -147,32 +169,42 @@ if __name__ == '__main__':
 		pts1 = np.float32(pts1)
 		pts2 = np.float32(pts2)
 
+		x_offset = 50
+		y_offset = 50
+		x_multiplier = 6
+		y_multiplier = 6
+
 		
-		pts2[:,0] = pts2[:,0]*6-200
-		pts2[:,1] = pts2[:,1]*6+400
+		pts2[:,0] = pts2[:,0]*6-x_offset
+		pts2[:,1] = pts2[:,1]*6+y_offset
 
 
 
 		try:
 			M = cv2.getPerspectiveTransform(np.array(pts1[:4]),np.array(pts2[:4]))
-			warp = cv2.warpPerspective(im,M,(2000,1000))
+			warp = cv2.warpPerspective(im,M,(200*6+50,85*6+50))
+			draw_ice(warp,xo = x_offset, yo = y_offset, xm = x_multiplier, ym = y_multiplier)
 			cv2.imshow('final',warp)
+			#print(pts2)
 		except:
 			print("FAILED")
 			print(pts2)
 
-
-		cv2.waitKey(0)
+		k = cv2.waitKey(0)
+		if(k==27):
+			break
+		if(k==98):
+			i-=2
+			
 	cv2.destroyAllWindows()
 
 	"""
 	mislabelled:
-	frame4460.jpg
-	frame3530.jpg
 
 	poor warp:
 	frame3560.jpg
-
+	frame4220.jpg
+	4520, 4760, 4490 goal line too low
 	
 
 
