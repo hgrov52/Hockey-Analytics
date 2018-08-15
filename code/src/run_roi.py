@@ -306,7 +306,7 @@ while file_num < len(lst):
       else:
         Gmask = cv2.add(Gmask,cv2.inRange(hsv, lower_range, upper_range))
 
-    cv2.imshow('Gmask',Gmask)
+    #cv2.imshow('Gmask',Gmask)
 
     image, cnts, hier = cv2.findContours(Gmask.copy(), 1, 2)
     best = None

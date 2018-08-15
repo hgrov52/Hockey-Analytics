@@ -38,8 +38,8 @@ def stitch(images, ratio=0.75, reprojThresh=4.0,
 	#cv2.imshow('imageB',imageB)
 
 	
-	#result = append_images(imageA,imageB,avgA,avgB)
-	result = imageA
+	result = append_images(imageA,imageB,avgA,avgB)
+	#result = imageA
 	
 
 	#cv2.imshow('result',result)
@@ -53,6 +53,17 @@ def stitch(images, ratio=0.75, reprojThresh=4.0,
 		return (result, vis)
 
 	return result
+
+def analyze(imageA, imageB, ratio = 0.75,reprojThresh=4.0):
+	(kpsA, featuresA) = detectAndDescribe(imageA)
+	(kpsB, featuresB) = detectAndDescribe(imageB)
+	M = matchKeypoints(kpsA, kpsB,
+		featuresA, featuresB, ratio, reprojThresh)
+	if M is None:
+		return None
+	(matches, H, status) = M
+	return find_shift(kpsA, kpsB, matches, status)
+		
 
 def append_images(imageA,imageB,avgA,avgB):
 	shift_x = avgA[0]-avgB[0]

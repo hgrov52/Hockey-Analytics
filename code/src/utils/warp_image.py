@@ -1,22 +1,7 @@
 import cv2
 import numpy as np
 
-"""
-    if(params == None):
-        TRANSFORM_X = 200
-        TRANSFORM_Y = 600
-        TRANSFORM_X_SHAPE = 20
-        TRANSFORM_Y_SHAPE = 5
-        MAX_SHAPE = 400
-    else:
-        TRANSFORM_X = params[0]
-        TRANSFORM_Y = params[1]
-        TRANSFORM_X_SHAPE = params[2]
-        TRANSFORM_Y_SHAPE = params[3]
-        MAX_SHAPE = params[4]
 
-
-"""
 
 TRANSFORM_X = 200
 TRANSFORM_Y = 200
@@ -68,12 +53,6 @@ def rotate_points_ccw(x00,y00,x01,y01,x11,y11,x10,y10):
     return x10,y10,x00,y00,x01,y01,x11,y11
 
 def generate_points(im, warp_lines, draw=False):
-    """
-
-    mark lines as left, right, top, bottom
-
-    """
-    
     top = left = bottom = right = None
     steep_pos_slope = []
     steep_neg_slope = []
@@ -126,9 +105,9 @@ def generate_points(im, warp_lines, draw=False):
     
 
     if(right != None):
-        x01,y01 = find_point_along_line(x00,y00,left[0],-NEW_TRANSFORM)
+        x01,y01 = find_point_along_line(x00,y00,left[0],-TRANSFORM_Y)
         x10,y10 = find_intersection_point(top,right)
-        x11,y11 = find_point_along_line(x10,y10,right[0],-NEW_TRANSFORM)
+        x11,y11 = find_point_along_line(x10,y10,right[0],-TRANSFORM_Y)
     else:
         x01,y01 = find_point_along_line(x00,y00,left[0],-TRANSFORM_Y)
         x10,y10 = find_point_along_line(x00,y00,top[0],TRANSFORM_X)
@@ -141,7 +120,7 @@ def generate_points(im, warp_lines, draw=False):
 
 
 def get_ratio(blue_lines,yellow_line):
-
+    # find radio between real life distance and image distance
     return
     
 

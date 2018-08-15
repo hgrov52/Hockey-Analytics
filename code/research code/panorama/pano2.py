@@ -1,6 +1,7 @@
 import numpy as np
 import cv2,os,sys,time
 from matchers import matchers
+from camera_stitch import analyze
 
 class Stitch:
 	def __init__(self):
@@ -40,9 +41,13 @@ class Stitch:
 		dsize = (int(ds[0])+offsetx, int(ds[1]) + offsety)
 		print ("image dsize =>", dsize)
 		a = cv2.warpPerspective(a, xh, dsize)
-		# cv2.imshow("warped", tmp)
+		# cv2.imshow("a", a)
+		# cv2.imshow("b",b)
 		# cv2.waitKey()
-		a[offsety:b.shape[0]+offsety, offsetx:b.shape[1]+offsetx] = b
+
+		print(a.shape)
+		a[offsety:b.shape[0]+offsety, 
+		offsetx:b.shape[1]+offsetx] = b
 		return a
 
 		
@@ -119,38 +124,52 @@ if __name__ == '__main__':
 	images = []
 	result = None
 	s = Stitch()
-	"""
+	
 	count=0
-	lst = sorted(os.listdir(os.fsencode('../../Frame_Images/ACHA UNH')))
-	file_num = 0
-	l = len(lst)
-	while file_num < l:
-		file = lst[file_num]
+	lst = sorted(os.listdir(os.fsencode('../../../data/frames/continuous/ACHA UNH/')))
+	while count < len(lst):
+		file = lst[count]
 		filename = os.fsdecode(file)
-		file_num+=1
 		if(filename.endswith('.jpg') == False):
 			continue
 		
 		count+=1
-		print(str(float(count)/float(l)*100)+"%")
-		im = cv2.imread('../../Frame_Images/ACHA UNH/'+filename)
+		print(str(float(count)/float(len(lst))*100)+"%")
+		im = cv2.imread('../../../data/frames/continuous/ACHA UNH/'+filename)
 		im = cv2.resize(im,(480, 320))
 		if(result is None):
 			result = im
 			continue
-		result = s.leftshift(im,result)
+		"""
+		avgA,avgB,rngA, rngB = analyze(result,im)
+		print(avgA,avgB)
+		if(avgA[0]<avgB[0]):
+			result = s.leftshift(im,result)
+		else:
+			result = s.rightshift(im,result)
+		"""
+		try:
+			result = leftshift(result,im)
+		except:
+			print()
+
+
 		cv2.imshow('r', result)
 		k=cv2.waitKey(0)
 		if(k==27):
 			break
+	
 
-	"""
 
-	im1 = cv2.resize(cv2.imread('frame1094.jpg'),(480, 320))
-	im2 = cv2.resize(cv2.imread('frame1039.jpg'),(480, 320))
-	im3 = cv2.resize(cv2.imread('frame907.jpg'),(480, 320))
+	
+	im1 = cv2.resize(cv2.imread('../../../data/frames/continuous/ACHA UNH/frame907.jpg'),(480, 320))
+	im2 = cv2.resize(cv2.imread('../../../data/frames/continuous/ACHA UNH/frame908.jpg'),(480, 320))
+	im3 = cv2.resize(cv2.imread('../../../data/frames/continuous/ACHA UNH/frame909.jpg'),(480, 320))
+	im4 = cv2.resize(cv2.imread('../../../data/frames/continuous/ACHA UNH/frame910.jpg'),(480, 320))
+	im5 = cv2.resize(cv2.imread('../../../data/frames/continuous/ACHA UNH/frame911.jpg'),(480, 320))
+	
 	result = im1
-	result = s.leftshift(result,im2)
+	result = s.leftshift(im3,result)
 	cv2.imshow('r',result)
 	cv2.waitKey(0)
 	result = s.leftshift(im3,result)
