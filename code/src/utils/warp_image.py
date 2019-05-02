@@ -100,8 +100,9 @@ def generate_points(im, warp_lines, draw=False):
     NEW_TRANSFORM = 840
 
     x00,y00 = find_intersection_point(top,left)
-    cv2.circle(im,(x00,y00),5,(0,255,0),-1)
-    
+    #if(draw):
+        #cv2.circle(im,(x00,y00),5,(0,255,0),-1)
+        
     
 
     if(right != None):
@@ -112,9 +113,10 @@ def generate_points(im, warp_lines, draw=False):
         x01,y01 = find_point_along_line(x00,y00,left[0],-TRANSFORM_Y)
         x10,y10 = find_point_along_line(x00,y00,top[0],TRANSFORM_X)
         x11,y11 = find_point_along_line(x10,y10,left[0],-TRANSFORM_Y)
-    cv2.circle(im,(x01,y01),5,(0,255,0),-1)
-    cv2.circle(im,(x10,y10),5,(0,255,0),-1)
-    cv2.circle(im,(x11,y11),5,(0,255,0),-1)
+    #if(draw):
+        # cv2.circle(im,(x01,y01),5,(0,255,0),-1)
+        # cv2.circle(im,(x10,y10),5,(0,255,0),-1)
+        # cv2.circle(im,(x11,y11),5,(0,255,0),-1)
 
     return np.float32(((x00,y00), (x01,y01), (x11,y11), (x10,y10)))
 

@@ -1,6 +1,6 @@
 from __future__ import print_function
 import numpy as np
-import cv2
+import cv2,os
 import camera_stitch
 import matplotlib.pyplot as plt
 
@@ -46,53 +46,6 @@ def build_panorama():
 
 
 
-
-	
-def build_panorama2():
-	
-	vidcap = cv2.VideoCapture('../../../data/video/ACHA_vid.mp4')
-	result = None
-	success = True
-	count = 0
-	while success:
-		print(count)
-		success,image = vidcap.read()
-		if(result is None):
-			result = image
-			continue
-		
-		if(count%20 == 0):
-			cv2.destroyAllWindows()
-			(result,vis) = camera_stitch.stitch([result,image],showMatches=True)
-			cv2.imshow('matches',vis)
-			cv2.imshow('result',result)
-			k = cv2.waitKey(0)
-			if(k==27):
-				break
-		count+=1
-	cv2.destroyAllWindows()
-
-"""
-
-numpy.fill
-
-1. define array of zeros size of result
-2. in that array you can set a range 
-
-"""
-
-
-def build_panorama3():
-	import camera_stitch
-	images = []
-	images.append(cv2.imread('frame907.jpg'))
-	images.append(cv2.imread('frame908.jpg'))
-	#images.append(cv2.imread('frame1048.jpg'))
-	#images.append(cv2.imread('frame1098.jpg'))
-
-	(result,vis) = camera_stitch.stitch(images,showMatches=True)
-	cv2.imshow('r',vis)
-	cv2.waitKey(0)
 
 def build_panorama3():
 
@@ -177,4 +130,4 @@ def remove_differences():
 		cv2.destroyAllWindows()
 
 if __name__ == '__main__':
-	build_panorama()
+	build_panorama2()

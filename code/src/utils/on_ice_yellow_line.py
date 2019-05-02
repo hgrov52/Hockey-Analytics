@@ -13,6 +13,7 @@ def define_lines(im,draw = False):
   edges = cv2.Canny(mask,0,0,apertureSize = 5)
   lines = cv2.HoughLinesP(edges,1,np.pi/180,100,20)
   lines2 = cv2.HoughLines(edges,1,np.pi/180,150)
+  print(len(lines),len(lines2))
 
   radial = {}
   if(lines2 is not None):

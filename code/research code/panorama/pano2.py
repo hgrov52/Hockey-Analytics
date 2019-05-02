@@ -38,7 +38,7 @@ class Stitch:
 		ds = np.dot(xh, np.array([a.shape[1], a.shape[0], 1]))
 		offsety = abs(int(f1[1]))
 		offsetx = abs(int(f1[0]))
-		dsize = (int(ds[0])+offsetx, int(ds[1]) + offsety)
+		dsize = (int(ds[0])+offsetx, int(ds[1])+offsety)
 		print ("image dsize =>", dsize)
 		a = cv2.warpPerspective(a, xh, dsize)
 		# cv2.imshow("a", a)
@@ -148,10 +148,11 @@ if __name__ == '__main__':
 		else:
 			result = s.rightshift(im,result)
 		"""
+
 		try:
-			result = leftshift(result,im)
+			result = s.leftshift(result,im)
 		except:
-			print()
+			None
 
 
 		cv2.imshow('r', result)

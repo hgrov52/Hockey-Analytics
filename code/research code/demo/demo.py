@@ -128,6 +128,11 @@ if __name__ == '__main__':
 	pp = pprint.PrettyPrinter(indent=4)
 	#pp.pprint(dataset)
 
+
+	fourcc = cv2.VideoWriter_fourcc(*'mp4v') # Be sure to use lower case
+	out = cv2.VideoWriter('demo_warp2.mp4', fourcc, 20.0, (1250, 560))
+	#video=cv2.VideoWriter('dem.mp4',-1,1,(1280,720))
+
 	print(len(dataset))
 	i=0
 	while(i<len(dataset)):
@@ -183,8 +188,10 @@ if __name__ == '__main__':
 		try:
 			M = cv2.getPerspectiveTransform(np.array(pts1[:4]),np.array(pts2[:4]))
 			warp = cv2.warpPerspective(im,M,(200*6+50,85*6+50))
-			#draw_ice(warp,xo = x_offset, yo = y_offset, xm = x_multiplier, ym = y_multiplier)
+			draw_ice(warp,xo = x_offset, yo = y_offset, xm = x_multiplier, ym = y_multiplier)
 			cv2.imshow('final',warp)
+			out.write(warp)
+			print(warp.shape)
 			#print(pts2)
 		except:
 			print("FAILED")
@@ -197,6 +204,7 @@ if __name__ == '__main__':
 			i-=2
 			
 	cv2.destroyAllWindows()
+	video.release()
 
 	"""
 	mislabelled:

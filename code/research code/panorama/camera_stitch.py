@@ -1,58 +1,45 @@
-import cv2, imutils
+import cv2, imutils, os
 import numpy as np
 import matplotlib.pyplot as plt
 
-def stitch(images, ratio=0.75, reprojThresh=4.0,
-	showMatches=False):
-	# unpack the images, then detect keypoints and extract
-	# local invariant descriptors from them
-	(imageA, imageB) = images
-	(kpsA, featuresA) = detectAndDescribe(imageA)
-	(kpsB, featuresB) = detectAndDescribe(imageB)
+wait = 1
 
-	# match features between the two images
-	M = matchKeypoints(kpsA, kpsB,
-		featuresA, featuresB, ratio, reprojThresh)
-
-	# if the match is None, then there aren't enough matched
-	# keypoints to create a panorama
-	if M is None:
-		return None
+def stitch(prev, im, result, posx,posy, ratio=0.75, reprojThresh=4.0,
+	show=False):
 	
+	offsetx,offsety,H = generate_homography(prev,im)
 
-	# otherwise, apply a perspective warp to stitch the images
-	# together
-	(matches, H, status) = M
-	#result = cv2.warpPerspective(imageA, H,(imageA.shape[1] + imageB.shape[1], imageA.shape[0]))
-	#cv2.imshow('r',result)
-	#cv2.waitKey(0)
-	#result[0:imageB.shape[0], 0:imageB.shape[1]] = imageB
-
-
-
-	avgA, avgB, rngA, rngB = find_shift(kpsA, kpsB, matches, status)
-	print(rngA,rngB)
-	cv2.circle(imageA, avgA, 3, (0, 255, 0), -1)
-	cv2.circle(imageB, avgB, 3, (0, 255, 0), -1)
-	#cv2.imshow('imageA',imageA)
-	#cv2.imshow('imageB',imageB)
-
+	posx+=offsetx
+	posy-=offsety
+	print(posx,posy)
+	if(offsetx>0):
+		print('right')
+	elif(offsetx<0):
+		print('left')
+	if(offsety>0):
+		print('down')
+	elif(offsety<0):
+		print('up')
+	print()
 	
-	result = append_images(imageA,imageB,avgA,avgB)
-	#result = imageA
-	
+	#prev[offsety:im.shape[0]+offsety, offsetx:im.shape[1]+offsetx] = im
 
-	#cv2.imshow('result',result)
-	#cv2.waitKey(0)
-	#result = np.zeros((imageA.shape[0]+abs(avgA[0]-avgB[0]),imageA.shape[1]+abs(avgA[0]-avgB[0]),imageA.shape[2]))
-	#cv2.destroyAllWindows()
+	result = append_images(result,im,-offsetx,-offsety)
 
-	if showMatches:
-		vis = drawMatches(imageA, imageB, kpsA, kpsB, matches,
-			status)
-		return (result, vis)
 
-	return result
+	if show:
+		global wait
+		cv2.imshow("result",result)
+		cv2.imshow("current",im)
+		k = cv2.waitKey(wait)
+		if(k==27):
+			cv2.destroyAllWindows()
+			exit(1)
+		if(k==32):
+			wait = not wait
+
+
+	return result,posx,posy
 
 def analyze(imageA, imageB, ratio = 0.75,reprojThresh=4.0):
 	(kpsA, featuresA) = detectAndDescribe(imageA)
@@ -65,9 +52,7 @@ def analyze(imageA, imageB, ratio = 0.75,reprojThresh=4.0):
 	return find_shift(kpsA, kpsB, matches, status)
 		
 
-def append_images(imageA,imageB,avgA,avgB):
-	shift_x = avgA[0]-avgB[0]
-	shift_y = avgA[1]-avgB[1]
+def append_images(imageA,imageB,shift_x,shift_y):
 	right,shift_x = (abs(shift_x),0) if shift_x<0 else (0,shift_x) 
 	down,shift_y = (abs(shift_y),0) if shift_y<0 else (0,shift_y) 
 	result = np.zeros((max(imageA.shape[0]+shift_y,imageB.shape[0]+down),max(imageA.shape[1]+shift_x,imageB.shape[1]+right),3))
@@ -79,25 +64,34 @@ def append_images(imageA,imageB,avgA,avgB):
 	result[down:(imageB.shape[0]+down),right:(imageB.shape[1]+right),:]= \
 	np.where(result[down:(imageB.shape[0]+down),right:(imageB.shape[1]+right),:]==-np.inf, \
 	imageB,result[down:(imageB.shape[0]+down),right:(imageB.shape[1]+right),:])
-
 	result = result.astype(np.uint8)
 	return result
 
-def detectAndDescribe(image):
-	# convert the image to grayscale
-	gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-
-	# detect and extract features from the image
+def generate_homography(imageA, imageB, ratio=0.75, reprojThresh=4.0):
+	grayA = cv2.cvtColor(imageA, cv2.COLOR_BGR2GRAY)
+	grayB = cv2.cvtColor(imageB, cv2.COLOR_BGR2GRAY)
 	descriptor = cv2.xfeatures2d.SIFT_create()
-	(kps, features) = descriptor.detectAndCompute(image, None)
+	(kpsA, featuresA) = descriptor.detectAndCompute(imageA, None)
+	(kpsB, featuresB) = descriptor.detectAndCompute(imageB, None)
+	kpsA = np.float32([kp.pt for kp in kpsA])
+	kpsB = np.float32([kp.pt for kp in kpsB])
 
-	# convert the keypoints from KeyPoint objects to NumPy
-	# arrays
-	kps = np.float32([kp.pt for kp in kps])
-	#print(kps)
-
-	# return a tuple of keypoints and features
-	return (kps, features)
+	M = matchKeypoints(kpsA, kpsB, featuresA, featuresB, ratio, reprojThresh)
+	if M is None:
+		return None
+	(matches, H, status) = M
+	H_inv = np.linalg.inv(H)
+	ds = np.dot(H_inv, np.array([imageA.shape[1], imageA.shape[0], 1]))
+	ds = ds/ds[-1]
+	f1 = np.dot(H_inv, np.array([0,0,1]))
+	f1 = f1/f1[-1]
+	H_inv[0][-1] += abs(f1[0])
+	H_inv[1][-1] += abs(f1[1])
+	ds = np.dot(H_inv, np.array([imageA.shape[1], imageA.shape[0], 1]))
+	offsety = int(f1[1])
+	offsetx = int(f1[0])
+	return offsetx, offsety, H
+	
 
 
 def matchKeypoints(kpsA, kpsB, featuresA, featuresB,
@@ -198,3 +192,31 @@ def find_shift(kpsA, kpsB, matches, status):
 			avgB[1]+=ptB[1]/len(kpsB)
 			
 	return (int(avgA[0]),int(avgA[1])),(int(avgB[0]),int(avgB[1])), ((maxxA - minxA),(maxyA - minyA)), ((maxxB - minxB),(maxyB - minyB))
+
+if __name__ == '__main__':
+	prev = None
+	result = None
+	posx = 0
+	posy = 0
+	count=-1
+	lst = sorted(os.listdir(os.fsencode('../../../data/frames/continuous/ACHA UNH/')))
+	while count < len(lst):
+		file = lst[count]
+		filename = os.fsdecode(file)
+		if(filename.endswith('.jpg') == False):
+			continue
+		
+		count+=1
+		if(count%1==0):
+			#print(str(float(count)/float(len(lst))*100)+"%")
+			im = cv2.imread('../../../data/frames/continuous/ACHA UNH/'+filename)
+			im = cv2.resize(im,(480, 320))
+			if(prev is None):
+				result = im
+				prev = im
+				continue
+
+
+			result,posx,posy = stitch(prev, im, result, posx,posy, show=True)
+			prev = im
+			
